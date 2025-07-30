@@ -1,10 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"strconv"
+	"strings"
+	"time"
 )
 
 type returnJSONData struct {
@@ -26,6 +31,9 @@ func callback(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	currentTime := time.Now()
+	fmt.Println("Default timestamp:", currentTime.Unix())
+	fmt.Println("Formatted timestamp:", currentTime.Format("2006-01-02 15:04:05"))
 	fmt.Printf("Received POST request body:\n%s\n", string(body))
 
 	resp.Header().Set("Content-Type", "application/json")
@@ -46,7 +54,23 @@ func callback(resp http.ResponseWriter, request *http.Request) {
 }
 
 func main() {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Enter the port number: ")
+	portStr, _ := reader.ReadString('\n')
+	portStr = strings.TrimSpace(portStr) // Remove leading/trailing whitespace, including newline
+
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		fmt.Println("Invalid port number. Please enter a number.")
+		return
+	}
+
+	addr := fmt.Sprintf("0.0.0.0:%d", port)
+
 	http.HandleFunc("/callback", callback)
-	fmt.Println("Callback listening on http://<device_ip>:4444/callback POST")
-	http.ListenAndServe("0.0.0.0:4444", nil)
+	fmt.Printf("Callback listening on http://<device_ip>:%d/callback POST\n", port)
+	err = http.ListenAndServe(addr, nil)
+	if err != nil {
+		fmt.Printf("Error starting server: %v\n", err)
+	}
 }
